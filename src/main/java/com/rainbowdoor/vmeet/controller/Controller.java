@@ -40,4 +40,18 @@ public class Controller {
         }
         return result;
     }
+
+    @PostMapping("/login")
+    @ResponseBody
+    public Map<String, String> login(@RequestBody Map<String, String> requestBody) {
+        Map<String, String> result = new HashMap<>();
+        if (userService.selectCountByNameAndPassword(requestBody.get("userName"), requestBody.get("password")) > 0) {
+            result.put("type", "1");
+            result.put("message", "登录成功");
+        } else {
+            result.put("type", "0");
+            result.put("message", "用户名或密码错误");
+        }
+        return result;
+    }
 }

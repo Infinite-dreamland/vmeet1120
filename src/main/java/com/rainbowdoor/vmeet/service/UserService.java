@@ -13,4 +13,9 @@ public class UserService {
     {
         userMapper.insertUser(name, password, phone);
     }
+
+    public int selectCountByNameAndPassword(String name, String password)
+    {
+        return userMapper.selectCountByNameAndPassword(name, password);
+    }
 }
