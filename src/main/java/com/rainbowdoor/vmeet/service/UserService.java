@@ -18,4 +18,19 @@ public class UserService {
     {
         return userMapper.selectCountByNameAndPassword(name, password);
     }
+
+    public void updatePasswordByPhone(String password, String phone)
+    {
+        userMapper.updatePasswordByPhone(password, phone);
+    }
+
+    public void updatePhoneByPhone(String newPhone, String OldPhone)
+    {
+        userMapper.updatePhoneByPhone(newPhone, OldPhone);
+    }
+
+    public void updateNameByPhone(String newName, String phone)
+    {
+        userMapper.updateNameByPhone(newName, phone);
+    }
 }
