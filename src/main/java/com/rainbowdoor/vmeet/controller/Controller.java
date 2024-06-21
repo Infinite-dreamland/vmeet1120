@@ -44,7 +44,7 @@ public class Controller {
     @ResponseBody
     public Map<String, String> login(@RequestParam Map<String, String> requestBody) {
         Map<String, String> result = new HashMap<>();
-        if (userService.selectCountByNameAndPassword(requestBody.get("userName"), requestBody.get("password")) > 0) {
+        if (userService.selectCountByNameAndPassword(requestBody.get("userName"), requestBody.get("password")) > 0 || userService.selectCountByPhoneAndPassword(requestBody.get("userName"), requestBody.get("password")) > 0){
             result.put("type", "1");
             result.put("message", "登录成功");
         } else {

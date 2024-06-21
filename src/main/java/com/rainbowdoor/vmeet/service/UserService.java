@@ -33,4 +33,9 @@ public class UserService {
     {
         userMapper.updateNameByPhone(newName, phone);
     }
+
+    public int selectCountByPhoneAndPassword(String phone, String password)
+    {
+        return userMapper.selectCountByPhoneAndPassword(phone, password);
+    }
 }

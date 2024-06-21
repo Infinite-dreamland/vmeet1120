@@ -21,4 +21,7 @@ public interface UserMapper {
 
     @Update("UPDATE Users SET name = #{newName} WHERE phone = #{phone}")
     void updateNameByPhone(String newName, String phone);
+
+    @Select("SELECT COUNT(*) FROM Users WHERE phone = #{phone} AND password = #{password}")
+    int selectCountByPhoneAndPassword(String phone, String password);
 }
