@@ -1,5 +1,6 @@
 package com.rainbowdoor.vmeet.controller;
 
+import com.rainbowdoor.vmeet.service.AssetService;
 import com.rainbowdoor.vmeet.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +8,12 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,6 +21,8 @@ import java.util.Map;
 public class Controller {
     @Autowired
     private UserService userService;
+    @Autowired
+    private AssetService assetService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -203,4 +212,66 @@ public class Controller {
         }
         return result;
     }
+
+    @GetMapping("/backend/isAssetNameDuplicated")
+    @ResponseBody
+    public String isAssetNameDuplicated(@RequestParam String assetname, @RequestParam String username, @RequestParam Integer expires, @RequestParam String type, @RequestParam String token)
+    {
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return "timestamp expired";
+        }
+        if(userService.selectPasswordByUsername(username) != null)
+        {
+            String password = userService.selectPasswordByUsername(username);
+            String generatedToken = generateMD5(assetname + expires + password + type + username);
+            if(generatedToken.equals(token))
+            {
+                Integer uid = userService.selectIdByUsername(username);
+                if(assetService.selectAssetCountByNameUidAndType(assetname, uid, type) == 0)
+                {
+                    return "ok";
+                }
+                else
+                {
+                    return "duplicated";
+                }
+            }
+        }
+        if(userService.selectPasswordByPhone(username) != null)
+        {
+            String password = userService.selectPasswordByPhone(username);
+            String generatedToken = generateMD5(assetname + expires + password + type + username);
+            if(!generatedToken.equalsIgnoreCase(token))
+            {
+                return "invalid token";
+            }
+            Integer uid = userService.selectIdByPhone(username);
+            if(assetService.selectAssetCountByNameUidAndType(assetname, uid, type) == 0)
+            {
+                return "ok";
+            }
+            else
+            {
+                return "duplicated";
+            }
+        }
+        return "wrong username or password";
+    }
+
+    private String generateMD5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            BigInteger no = new BigInteger(1, messageDigest);
+            StringBuilder hashtext = new StringBuilder(no.toString(16));
+            while (hashtext.length() < 32) {
+                hashtext.insert(0, "0");
+            }
+            return hashtext.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not found", e);
+        }
+    }
+
 }

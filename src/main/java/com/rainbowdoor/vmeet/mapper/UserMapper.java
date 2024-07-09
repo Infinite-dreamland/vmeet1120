@@ -24,4 +24,16 @@ public interface UserMapper {
 
     @Select("SELECT COUNT(*) FROM Users WHERE phone = #{phone} AND password = #{password}")
     int selectCountByPhoneAndPassword(String phone, String password);
+
+    @Select("SELECT password from Users WHERE name = #{username}")
+    String selectPasswordByUsername(String username);
+
+    @Select("SELECT password from Users WHERE phone = #{phone}")
+    String selectPasswordByPhone(String phone);
+
+    @Select("SELECT id from Users WHERE name = #{username}")
+    Integer selectIdByUsername(String username);
+
+    @Select("SELECT id from Users WHERE phone = #{phone}")
+    Integer selectIdByPhone(String phone);
 }

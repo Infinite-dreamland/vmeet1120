@@ -38,4 +38,26 @@ public class UserService {
     {
         return userMapper.selectCountByPhoneAndPassword(phone, password);
     }
+
+    public String selectPasswordByUsername(String username)
+    {
+        return userMapper.selectPasswordByUsername(username);
+    }
+
+    public String selectPasswordByPhone(String phone)
+    {
+        return userMapper.selectPasswordByPhone(phone);
+    }
+
+    public Integer selectIdByUsername(String username)
+    {
+        return userMapper.selectIdByUsername(username);
+    }
+
+    public Integer selectIdByPhone(String phone)
+    {
+        return userMapper.selectIdByPhone(phone);
+    }
+
+
 }

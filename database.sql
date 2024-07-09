@@ -1,4 +1,5 @@
 use vmeet;
+DROP TABLE IF EXISTS Assets;
 DROP TABLE IF EXISTS Users;
 CREATE TABLE Users (
 	id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -7,5 +8,13 @@ CREATE TABLE Users (
     phone VARCHAR(11),
     CONSTRAINT UNIQUE(name),
 	CONSTRAINT UNIQUE(phone)
+);
+CREATE TABLE Assets (
+	id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(20),
+    uid INTEGER,
+    type VARCHAR(20),
+    privacy VARCHAR(10) DEFAULT "private",
+	CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id)
 );
 select * from Users;
