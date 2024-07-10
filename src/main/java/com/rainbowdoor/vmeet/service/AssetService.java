@@ -1,8 +1,12 @@
 package com.rainbowdoor.vmeet.service;
 
+import com.rainbowdoor.vmeet.entity.Asset;
+import com.rainbowdoor.vmeet.entity.UserAssetWithoutPrivacy;
 import com.rainbowdoor.vmeet.mapper.AssetMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class AssetService {
@@ -17,5 +21,20 @@ public class AssetService {
     public void insertAsset(String name, Integer uid, String type, String privacy)
     {
         assetMapper.insertAsset(name, uid, type, privacy);
+    }
+
+    public void updateLastModifiedTimeByNameUidAndType(String name, Integer uid, String type)
+    {
+        assetMapper.updateLastModifiedTimeByNameUidAndType(name, uid, type);
+    }
+
+    public List<Asset> selectAssetsByNameAndUidAndType(String name, Integer uid, String type)
+    {
+        return assetMapper.selectAssetsByNameAndUidAndType(name, uid, type);
+    }
+
+    public List<UserAssetWithoutPrivacy> selectPublicAssetsByNameAndType(String name, String type)
+    {
+        return assetMapper.selectPublicAssetsByNameAndType(name, type);
     }
 }

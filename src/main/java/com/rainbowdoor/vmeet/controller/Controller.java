@@ -1,5 +1,7 @@
 package com.rainbowdoor.vmeet.controller;
 
+import com.rainbowdoor.vmeet.entity.Asset;
+import com.rainbowdoor.vmeet.entity.UserAssetWithoutPrivacy;
 import com.rainbowdoor.vmeet.service.AssetService;
 import com.rainbowdoor.vmeet.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @org.springframework.stereotype.Controller
@@ -320,6 +323,7 @@ public class Controller {
             // Save the file
             Files.move(tempFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
             if(assetService.selectAssetCountByNameUidAndType(assetName, uid, type) == 0) assetService.insertAsset(assetName, uid, type, "private");
+            else assetService.updateLastModifiedTimeByNameUidAndType(assetName, uid, type);
             return "File uploaded successfully: " + destinationPath;
         } catch (IOException e) {
             return "Failed to upload file: " + e.getMessage();
@@ -341,4 +345,56 @@ public class Controller {
         }
     }
 
+    @GetMapping("/backend/getOwnAssets")
+    @ResponseBody
+    public ResponseEntity<List<Asset>> getOwnAssets(
+            @RequestParam String assetName,
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String type,
+            @RequestParam String token) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(assetName + expires + password + type + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(assetName + expires + password + type + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Asset> assets = assetService.selectAssetsByNameAndUidAndType(assetName, uid, type);
+        return ResponseEntity.ok(assets);
+    }
+
+    @GetMapping("/backend/getPublicAssets")
+    @ResponseBody
+    public ResponseEntity<List<UserAssetWithoutPrivacy>> getOwnAssets(
+            @RequestParam String assetName,
+            @RequestParam String type) {
+
+        List<UserAssetWithoutPrivacy> assets = assetService.selectPublicAssetsByNameAndType(assetName, type);
+        return ResponseEntity.ok(assets);
+    }
 }

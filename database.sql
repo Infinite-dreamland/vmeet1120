@@ -15,6 +15,10 @@ CREATE TABLE Assets (
     uid INTEGER,
     type VARCHAR(20),
     privacy VARCHAR(10) DEFAULT "private",
+    created_time DATETIME DEFAULT NOW(),
+    last_modified_time DATETIME DEFAULT NOW(),
 	CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id)
 );
 select * from Assets;
+insert into Assets (name, uid, type) values ("trial", 1, "Scene");
+update Assets SET privacy = "public" where id = 1;
