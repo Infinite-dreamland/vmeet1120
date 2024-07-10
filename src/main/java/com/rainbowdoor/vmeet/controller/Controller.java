@@ -7,9 +7,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -26,6 +32,8 @@ public class Controller {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    private String secret_key = "xl1120";
 
     @PostMapping("/register")
     @ResponseBody
@@ -257,6 +265,65 @@ public class Controller {
             }
         }
         return "wrong username or password";
+    }
+
+    @PutMapping("/backend/UserAssets")
+    @ResponseBody
+    public String uploadFile(@RequestParam("assetName") String assetName,
+                             @RequestParam("fileName") String fileName,
+                             @RequestParam("username") String username,
+                             @RequestParam("expires") Integer expires,
+                             @RequestParam("type") String type,
+                             @RequestParam("token") String token,
+                             HttpServletRequest request) {
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return "timestamp expired";
+        }
+        long fileSize;
+        Path tempFile;
+        try {
+            tempFile = Files.createTempFile("upload-", ".tmp"); // Create temp file
+            // Transfer incoming file to the temp file
+            fileSize = request.getInputStream().transferTo(Files.newOutputStream(tempFile));
+        } catch (IOException e) {
+            return "Failed to read file size: " + e.getMessage();
+        }
+        Integer uid = -1;
+        if(userService.selectPasswordByUsername(username) != null)
+        {
+            String password = userService.selectPasswordByUsername(username);
+            String generatedToken = generateMD5(assetName + expires + fileName + password + type + username + fileSize);
+            if(generatedToken.equals(token))
+            {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+        if(userService.selectPasswordByPhone(username) != null && uid == -1)
+        {
+            String password = userService.selectPasswordByPhone(username);
+            String generatedToken = generateMD5(assetName + expires + fileName + password + type + username + fileSize);
+            if(!generatedToken.equalsIgnoreCase(token))
+            {
+                return "invalid token";
+            }
+            uid = userService.selectIdByPhone(username);
+        }
+        else return "wrong username or password";
+        try {
+            String basePath = "D:\\UserAssetsManager\\UserAssetsManager\\Assets\\UserAssets";
+            Path destinationPath = Paths.get(basePath, generateMD5(uid.toString() + secret_key), type, assetName, fileName).normalize();
+
+            // Ensure the directory exists
+            Files.createDirectories(destinationPath.getParent());
+
+            // Save the file
+            Files.move(tempFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+            if(assetService.selectAssetCountByNameUidAndType(assetName, uid, type) == 0) assetService.insertAsset(assetName, uid, type, "private");
+            return "File uploaded successfully: " + destinationPath;
+        } catch (IOException e) {
+            return "Failed to upload file: " + e.getMessage();
+        }
     }
 
     private String generateMD5(String input) {

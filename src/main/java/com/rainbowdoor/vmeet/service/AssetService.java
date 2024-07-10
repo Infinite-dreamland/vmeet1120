@@ -13,4 +13,9 @@ public class AssetService {
     {
         return assetMapper.selectAssetCountByNameUidAndType(name, uid, type);
     }
+
+    public void insertAsset(String name, Integer uid, String type, String privacy)
+    {
+        assetMapper.insertAsset(name, uid, type, privacy);
+    }
 }

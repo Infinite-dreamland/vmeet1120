@@ -17,4 +17,4 @@ CREATE TABLE Assets (
     privacy VARCHAR(10) DEFAULT "private",
 	CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id)
 );
-select * from Users;
+select * from Assets;
