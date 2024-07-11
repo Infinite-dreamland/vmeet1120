@@ -315,7 +315,7 @@ public class Controller {
         else return "wrong username or password";
         try {
             String basePath = "D:\\UserAssetsManager\\UserAssetsManager\\Assets\\UserAssets";
-            Path destinationPath = Paths.get(basePath, generateMD5(uid.toString() + secret_key), type, assetName, fileName).normalize();
+            Path destinationPath = Paths.get(basePath, generateMD5(uid.toString() + secret_key), type, assetName + fileName.substring(fileName.lastIndexOf("."))).normalize();
 
             // Ensure the directory exists
             Files.createDirectories(destinationPath.getParent());
