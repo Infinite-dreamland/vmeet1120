@@ -3,8 +3,10 @@ package com.rainbowdoor.vmeet.controller;
 import com.rainbowdoor.vmeet.entity.Asset;
 import com.rainbowdoor.vmeet.entity.Friendship;
 import com.rainbowdoor.vmeet.entity.UserAssetWithoutPrivacy;
+import com.rainbowdoor.vmeet.entity.UserInfo;
 import com.rainbowdoor.vmeet.service.AssetService;
 import com.rainbowdoor.vmeet.service.FriendshipService;
+import com.rainbowdoor.vmeet.service.UserInfoService;
 import com.rainbowdoor.vmeet.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,8 @@ public class Controller {
     private AssetService assetService;
     @Autowired
     private FriendshipService friendshipService;
+    @Autowired
+    private UserInfoService userInfoService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -888,5 +892,22 @@ public class Controller {
         friendshipService.deleteFriendshipByUid1AndUid2(uid, friendUid);
         result.put("message", "success");
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/backend/searchUserInfoByName")
+    @ResponseBody
+    public ResponseEntity<UserInfo> searchUserInfoByName(
+            @RequestParam String username) {
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.ok().build();
+        }
+
+        return ResponseEntity.ok(userInfoService.selectUserInfoByUid(uid));
     }
 }

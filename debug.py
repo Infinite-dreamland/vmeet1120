@@ -13,5 +13,6 @@ def set_token(data, password):
     # token = md5(username + expires + password)
     data['token'] = hashlib.md5((data['username'] + str(data['expires']) + password).encode()).hexdigest()
 
-set_token(data, 'xyl3331996')
-print(requests.get('https://vmeet.fun/backend/getFriendship', params=data, verify=False).text)
+# set_token(data, 'xyl3331996')
+# print(requests.get('https://vmeet.fun/backend/getFriendship', params=data, verify=False).text)
+print(requests.get('https://localhost:442/backend/searchUserInfoByName', params=data, verify=False).text)
