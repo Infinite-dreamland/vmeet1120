@@ -1,8 +1,10 @@
 package com.rainbowdoor.vmeet.controller;
 
 import com.rainbowdoor.vmeet.entity.Asset;
+import com.rainbowdoor.vmeet.entity.Friendship;
 import com.rainbowdoor.vmeet.entity.UserAssetWithoutPrivacy;
 import com.rainbowdoor.vmeet.service.AssetService;
+import com.rainbowdoor.vmeet.service.FriendshipService;
 import com.rainbowdoor.vmeet.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,8 @@ public class Controller {
     private UserService userService;
     @Autowired
     private AssetService assetService;
+    @Autowired
+    private FriendshipService friendshipService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -396,5 +400,493 @@ public class Controller {
 
         List<UserAssetWithoutPrivacy> assets = assetService.selectPublicAssetsByNameAndType(assetName, type);
         return ResponseEntity.ok(assets);
+    }
+
+    @GetMapping("/backend/getFriendship")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendships = friendshipService.selectFriendshipsByUid(uid);
+        return ResponseEntity.ok(friendships);
+    }
+
+    @GetMapping("/backend/getAcceptedFriendship")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getAcceptedFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendships = friendshipService.selectAcceptedFriendshipsByUid(uid);
+        return ResponseEntity.ok(friendships);
+    }
+
+    @GetMapping("/backend/getPendingFriendship")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getPendingFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendships = friendshipService.selectPendingFriendshipsByUid(uid);
+        return ResponseEntity.ok(friendships);
+    }
+
+    @GetMapping("/backend/getRejectedFriendship")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getRejectedFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendships = friendshipService.selectRejectedFriendshipsByUid(uid);
+        return ResponseEntity.ok(friendships);
+    }
+
+    @GetMapping("/backend/getFriendshipRequests")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getFriendshipRequests(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendshipRequests = friendshipService.selectFriendshipsByUid2(uid);
+        return ResponseEntity.ok(friendshipRequests);
+    }
+
+    @GetMapping("/backend/getPendingFriendshipRequests")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getPendingFriendshipRequests(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendshipRequests = friendshipService.selectPendingFriendshipsByUid2(uid);
+        return ResponseEntity.ok(friendshipRequests);
+    }
+
+    @GetMapping("/backend/getRejectedFriendshipRequests")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getRejectedFriendshipRequests(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendshipRequests = friendshipService.selectRejectedFriendshipsByUid2(uid);
+        return ResponseEntity.ok(friendshipRequests);
+    }
+
+    @GetMapping("/backend/getAcceptedFriendshipRequests")
+    @ResponseBody
+    public ResponseEntity<List<Friendship>> getAcceptedFriendshipRequests(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Friendship> friendshipRequests = friendshipService.selectAcceptedFriendshipsByUid2(uid);
+        return ResponseEntity.ok(friendshipRequests);
+    }
+
+    @PostMapping("/backend/requestFriendship")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> requestFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        if(uid == friendUid) {
+            result.put("message", "You cannot send a friend request to yourself.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        if(friendshipService.selectCountByUid1AndUid2(uid, friendUid) > 0) {
+            Friendship friendship = friendshipService.selectFriendshipByUid1AndUid2(uid, friendUid);
+            if(friendship.getStatus().equals("pending")) {
+                result.put("message", "Request already exists.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            if(friendship.getStatus().equals("accepted")) {
+                result.put("message", "You are already friends with this user.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+            if(friendship.getStatus().equals("rejected")) {
+                friendshipService.deleteFriendshipByUid1AndUid2(uid, friendUid);
+                friendshipService.insertFriendship(uid, friendUid, "pending");
+                result.put("message", "success");
+                return ResponseEntity.ok(result);
+            }
+        }
+        friendshipService.insertFriendship(uid, friendUid, "pending");
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/backend/modifyFriendshipStatus")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> modifyFriendshipStatus(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid,
+            @RequestParam String status) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + status + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (status == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        if (friendshipService.selectCountByUid1AndUid2Ordered(friendUid, uid) == 0) {
+            result.put("message", "No request from this user.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        if (!status.equals("accepted") && !status.equals("rejected")) {
+            result.put("message", "Invalid status.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        friendshipService.updateStatusByUid1AndUid2(uid, friendUid, status);
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/backend/deleteFriendship")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> deleteFriendship(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        if (friendshipService.selectCountByUid1AndUid2(uid, friendUid) == 0) {
+            result.put("message", "You are not friends with this user.");
+            return ResponseEntity.ok(result);
+        }
+        friendshipService.deleteFriendshipByUid1AndUid2(uid, friendUid);
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
     }
 }

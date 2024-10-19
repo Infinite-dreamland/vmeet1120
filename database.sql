@@ -1,4 +1,5 @@
 use vmeet;
+DROP TABLE IF EXISTS Friendship;
 DROP TABLE IF EXISTS Assets;
 DROP TABLE IF EXISTS Users;
 CREATE TABLE Users (
@@ -19,6 +20,18 @@ CREATE TABLE Assets (
     last_modified_time DATETIME DEFAULT NOW(),
 	CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id)
 );
-select * from Assets;
-insert into Assets (name, uid, type) values ("trial", 1, "Scene");
-update Assets SET privacy = "public" where id = 1;
+CREATE TABLE Friendship (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    uid1 INTEGER,
+    uid2 INTEGER,
+    status VARCHAR(10) DEFAULT "pending",
+    created_time DATETIME DEFAULT NOW(),
+    last_modified_time DATETIME DEFAULT NOW(),
+    CONSTRAINT FOREIGN KEY (uid1) REFERENCES Users(id),
+    CONSTRAINT FOREIGN KEY (uid2) REFERENCES Users(id),
+    CONSTRAINT UNIQUE(uid1, uid2)
+);
+insert into users (name,password,phone) values ("xyc","xyl3331996","13233131808");
+insert into users (name,password,phone) values ("lhm","xyl3331996","15658682212");
+select * from users;
+select * from Friendship;
