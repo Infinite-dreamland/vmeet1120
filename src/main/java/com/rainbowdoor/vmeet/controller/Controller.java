@@ -1,13 +1,7 @@
 package com.rainbowdoor.vmeet.controller;
 
-import com.rainbowdoor.vmeet.entity.Asset;
-import com.rainbowdoor.vmeet.entity.Friendship;
-import com.rainbowdoor.vmeet.entity.UserAssetWithoutPrivacy;
-import com.rainbowdoor.vmeet.entity.UserInfo;
-import com.rainbowdoor.vmeet.service.AssetService;
-import com.rainbowdoor.vmeet.service.FriendshipService;
-import com.rainbowdoor.vmeet.service.UserInfoService;
-import com.rainbowdoor.vmeet.service.UserService;
+import com.rainbowdoor.vmeet.entity.*;
+import com.rainbowdoor.vmeet.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -40,6 +34,10 @@ public class Controller {
     private FriendshipService friendshipService;
     @Autowired
     private UserInfoService userInfoService;
+    @Autowired
+    private ChatService chatService;
+    @Autowired
+    private ChatSessionService chatSessionService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -909,5 +907,302 @@ public class Controller {
         }
 
         return ResponseEntity.ok(userInfoService.selectUserInfoByUid(uid));
+    }
+
+    @PostMapping("/backend/insertChat")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> insertChat(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid,
+            @RequestParam String message) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + message + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (message == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        if (friendshipService.selectAcceptedCountByUid1AndUid2(uid, friendUid) == 0) {
+            result.put("message", "You are not friends with this user.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        chatService.insertChat(uid, friendUid, message);
+        if(chatSessionService.selectCountByUid1AndUid2(uid, friendUid) == 0) {
+            chatSessionService.insertChatSession(uid, friendUid);
+        }
+        if(chatSessionService.selectCountByUid1AndUid2(friendUid, uid) == 0) {
+            chatSessionService.insertChatSession(friendUid, uid);
+        }
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/backend/deleteChat")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> deleteChat(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer chatId) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(chatId + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (chatId == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        Chat chat = chatService.selectChatById(chatId);
+        if (chat == null) {
+            result.put("message", "Invalid chat ID.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        if (chat.getFrom_uid() != uid) {
+            result.put("message", "You are not the sender of this message.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        chatService.updateVisibilityById(chatId, false);
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/backend/getChatHistory")
+    @ResponseBody
+    public ResponseEntity<List<Chat>> selectChatsByUid1AndUid2(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid,
+            @RequestParam Integer limit,
+            @RequestParam Integer offset) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + limit.toString() + offset.toString() + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        return ResponseEntity.ok(chatService.selectChatsByUid1AndUid2(uid, friendUid, limit, offset));
+    }
+
+    @GetMapping("/backend/getChatCount")
+    @ResponseBody
+    public ResponseEntity<Integer> selectChatCountByUid1AndUid2(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer friendUid) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(friendUid + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendUid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if (friendshipService.selectAcceptedCountByUid1AndUid2(uid, friendUid) == 0) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        return ResponseEntity.ok(chatService.selectCountByUid1AndUid2(uid, friendUid));
+    }
+
+    @GetMapping("/backend/getChatSession")
+    @ResponseBody
+    public ResponseEntity<List<ChatSession>> selectChatSessionsByUid(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        return ResponseEntity.ok(chatSessionService.selectChatSessionsByUid1(uid));
+    }
+
+    @PostMapping("/backend/deleteChatSession")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> deleteChatSession(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires,
+            @RequestParam Integer chatSessionId) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(chatSessionId + username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+        ChatSession chatSession = chatSessionService.selectChatSessionById(chatSessionId);
+        if (chatSession == null) {
+            result.put("message", "Invalid chat session ID.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        if (chatSession.getUid1() != uid) {
+            result.put("message", "You are not the owner of this chat session.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
+        chatSessionService.deleteChatSessionById(chatSessionId);
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
     }
 }

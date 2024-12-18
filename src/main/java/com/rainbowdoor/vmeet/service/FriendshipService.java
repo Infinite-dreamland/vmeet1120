@@ -86,4 +86,9 @@ public class FriendshipService {
     {
         return friendshipMapper.selectFriendshipByUid1AndUid2Ordered(uid1, uid2);
     }
+
+    public int selectAcceptedCountByUid1AndUid2(Integer uid1, Integer uid2)
+    {
+        return friendshipMapper.selectAcceptedCountByUid1AndUid2(uid1, uid2);
+    }
 }

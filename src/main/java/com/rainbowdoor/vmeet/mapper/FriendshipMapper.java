@@ -28,6 +28,9 @@ public interface FriendshipMapper {
     @Select("SELECT COUNT(*) FROM Friendship WHERE uid1=#{uid1} AND uid2=#{uid2}")
     int selectCountByUid1AndUid2Ordered(Integer uid1, Integer uid2);
 
+    @Select("SELECT COUNT(*) FROM Friendship WHERE uid1=#{uid1} AND uid2=#{uid2} OR uid1=#{uid2} AND uid2=#{uid1} AND status=\"accepted\"")
+    int selectAcceptedCountByUid1AndUid2(Integer uid1, Integer uid2);
+
     @Select("SELECT * FROM Friendship WHERE uid1=#{uid1} AND uid2=#{uid2} OR uid1=#{uid2} AND uid2=#{uid1}")
     Friendship selectFriendshipByUid1AndUid2(Integer uid1, Integer uid2);
 
