@@ -1,5 +1,6 @@
 package com.rainbowdoor.vmeet.mapper;
 
+import com.rainbowdoor.vmeet.entity.User;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -36,4 +37,7 @@ public interface UserMapper {
 
     @Select("SELECT id from Users WHERE phone = #{phone}")
     Integer selectIdByPhone(String phone);
+
+    @Select("SELECT * from Users WHERE id = #{uid}")
+    User selectUserByUid(Integer uid);
 }

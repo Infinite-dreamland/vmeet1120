@@ -909,6 +909,48 @@ public class Controller {
         return ResponseEntity.ok(userInfoService.selectUserInfoByUid(uid));
     }
 
+    @GetMapping("/backend/getUserInfo")
+    @ResponseBody
+    public ResponseEntity<UserInfo> getUserInfo(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        if (uid == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        User user = userService.selectUserByUid(uid);
+        user.setPassword("hidden");
+
+        return ResponseEntity.ok(userInfoService.selectUserInfoByUid(uid));
+    }
+
     @PostMapping("/backend/insertChat")
     @ResponseBody
     public ResponseEntity<Map<String, String>> insertChat(

@@ -1,5 +1,6 @@
 package com.rainbowdoor.vmeet.service;
 
+import com.rainbowdoor.vmeet.entity.User;
 import com.rainbowdoor.vmeet.mapper.UserMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -59,5 +60,8 @@ public class UserService {
         return userMapper.selectIdByPhone(phone);
     }
 
-
+    public User selectUserByUid(Integer uid)
+    {
+        return userMapper.selectUserByUid(uid);
+    }
 }
