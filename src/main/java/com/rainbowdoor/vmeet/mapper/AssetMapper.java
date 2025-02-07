@@ -25,4 +25,13 @@ public interface AssetMapper {
 
     @Select("SELECT Users.name as username, Assets.id, Assets.name, Assets.type, Assets.created_time, Assets.last_modified_time FROM Assets, Users WHERE Assets.uid = Users.id AND LOWER(Assets.name) COLLATE utf8mb4_general_ci LIKE CONCAT('%', LOWER(#{name}), '%') AND type=#{type} AND privacy=\"public\" ORDER BY name ASC")
     List<UserAssetWithoutPrivacy> selectPublicAssetsByNameAndType(String name, String type);
+
+    @Select("SELECT Users.name as username, Assets.id, Assets.name, Assets.type, Assets.created_time, Assets.last_modified_time, Assets.price, Assets.thumbimages, Assets.description, Assets.num_views, Assets.num_buys FROM Assets, Users WHERE Assets.uid = Users.id AND LOWER(Assets.name) COLLATE utf8mb4_general_ci LIKE CONCAT('%', LOWER(#{name}), '%') AND privacy=\"public\" ORDER BY name ASC")
+    List<UserAssetWithoutPrivacy> selectPublicAssetsByName(String name, String type);
+
+    @Select("SELECT Users.name as username, Assets.id, Assets.name, Assets.type, Assets.created_time, Assets.last_modified_time, Assets.price, Assets.thumbimages, Assets.description, Assets.num_views, Assets.num_buys FROM Assets, Users WHERE Assets.uid = Users.id AND Assets.id=#{id} AND privacy=\"public\" ORDER BY name ASC")
+    UserAssetWithoutPrivacy selectPublicAssetById(Integer id);
+
+    @Update("UPDATE Assets SET num_buys = num_buys + 1 WHERE id=#{id}")
+    void updateNumBuysById(Integer id);
 }

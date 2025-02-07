@@ -15,4 +15,12 @@ public class UserInfoService {
     public UserInfo selectUserInfoByUid(Integer uid) {
         return userInfoMapper.selectUserInfoByUid(uid);
     }
+
+    public void insertUserProfile(Integer uid) {
+        userInfoMapper.insertUserProfile(uid);
+    }
+
+    public void updateCreditsByUid(Integer uid, Float credit) {
+        userInfoMapper.updateCreditsByUid(uid, credit);
+    }
 }

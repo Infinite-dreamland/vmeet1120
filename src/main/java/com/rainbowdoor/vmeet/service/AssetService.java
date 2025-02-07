@@ -37,4 +37,19 @@ public class AssetService {
     {
         return assetMapper.selectPublicAssetsByNameAndType(name, type);
     }
+
+    public List<UserAssetWithoutPrivacy> selectPublicAssetsByName(String name, String type)
+    {
+        return assetMapper.selectPublicAssetsByName(name, type);
+    }
+
+    public UserAssetWithoutPrivacy selectPublicAssetById(Integer id)
+    {
+        return assetMapper.selectPublicAssetById(id);
+    }
+
+    public void updateNumBuysById(Integer id)
+    {
+        assetMapper.updateNumBuysById(id);
+    }
 }

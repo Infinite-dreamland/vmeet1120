@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>积分商城</title>
+    <!-- Include MD5 library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+    <style>
+        /* Reset some default margins/paddings */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Left Panel */
+        .left-panel {
+            flex: 3;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+        }
+
+        .left-panel h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        /* Search box & button */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-right: none;
+            outline: none;
+            border-radius: 4px 0 0 4px;
+            font-size: 14px;
+        }
+
+        .search-bar button {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border-radius: 0 4px 4px 0;
+            transition: background 0.3s;
+        }
+
+        .search-bar button:hover {
+            background-color: #e4e4e4;
+        }
+
+        /* Tabs */
+        .tab-bar {
+            margin-bottom: 20px;
+        }
+
+        .tab-bar button {
+            margin-right: 10px;
+            padding: 8px 16px;
+            border: none;
+            outline: none;
+            background-color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .tab-bar button:hover {
+            background-color: #ddd;
+        }
+
+        .tab-bar button.active {
+            background-color: #4285f4;
+            color: #fff;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            margin: 40px auto;
+            border: 8px solid #f3f3f3; /* Light grey */
+            border-top: 8px solid #4285f4; /* Blue */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            display: none; /* Hidden by default */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Asset Cards */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .asset-card {
+            display: flex;
+            flex-direction: column;
+            background-color: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .asset-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .asset-thumbnail {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background-color: #ccc;
+        }
+
+        .asset-info {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .asset-name {
+            font-weight: bold;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .asset-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .asset-price {
+            color: #d9534f;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .asset-stats {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .asset-stats i {
+            margin-right: 4px;
+        }
+
+        /* Right Panel - now narrower */
+        .right-panel {
+            flex: 0 0 250px;
+            padding: 20px;
+            background-color: #f7f7f7;
+            border-left: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .right-panel .user-info p {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .right-panel a {
+            color: #4285f4;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .right-panel a:hover {
+            text-decoration: underline;
+        }
+
+        .right-panel button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #4285f4;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .right-panel button:hover {
+            background-color: #2a64b3;
+        }
+
+        /* Message for no results */
+        .no-results {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Left Panel -->
+    <div class="left-panel">
+        <h1>积分商城</h1>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="请输入资源名称..."
+                    value=""
+            />
+            <button onclick="onSearchClicked()">
+                搜索
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tab-bar">
+            <button class="tab-button active" data-type="all" onclick="onTabClicked('all', this)">全部</button>
+            <button class="tab-button" data-type="Character" onclick="onTabClicked('Character', this)">形象</button>
+            <button class="tab-button" data-type="Tool" onclick="onTabClicked('Tool', this)">道具</button>
+            <button class="tab-button" data-type="Scene" onclick="onTabClicked('Scene', this)">场景</button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="loading-spinner"></div>
+
+        <!-- Asset List (Grid) -->
+        <div id="assetGrid" class="asset-grid">
+            <!-- Items will be injected by JavaScript -->
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="no-results" style="display: none;">
+            没有找到相应资产
+        </div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+        <div id="userPanel">
+            <!-- The user info or login button will be injected here -->
+        </div>
+        <div>
+            <button onclick="window.location.href='/'">返回</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Default state
+    let currentType = 'all';
+    let currentAssetName = '';
+
+    // On page load, fetch user credits and default assets
+    window.onload = function() {
+        fetchUserCredits();
+        fetchAssets(currentType, currentAssetName);
+    };
+
+    // Provided function to get the expires timestamp
+    function getExpiresTimestamp() {
+        const now = new Date();
+        return Math.floor((now.getTime() + 5 * 60 * 1000) / 1000);
+    }
+
+    // Function to show user info with credits
+    function showUserInfo(credits) {
+        document.getElementById('userPanel').innerHTML = `
+            <div class="user-info">
+                <p id="userMoney">用户金额：${credits}</p>
+                <p><a href="/bills">购买记录</a></p>
+                <p><a href="/addMoney">增加金额</a></p>
+            </div>
+        `;
+    }
+
+    // Function to show login button
+    function showLoginButton() {
+        document.getElementById('userPanel').innerHTML = `
+            <button onclick="window.location.href='/mall/login?redirectTo=/mall'">登录</button>
+        `;
+    }
+
+    // Fetch user's credits with enhanced logic
+    function fetchUserCredits() {
+        const username = localStorage.getItem('userName');
+        const password = localStorage.getItem('password');
+
+        // If username or password is missing, show login button immediately.
+        if (!username || !password) {
+            showLoginButton();
+            return;
+        }
+
+        const expires = getExpiresTimestamp();
+        const token = md5(username + expires + password);
+        const url = `/backend/getUserCredits?username=${encodeURIComponent(username)}&token=${encodeURIComponent(token)}&expires=${expires}`;
+
+        fetch(url)
+            .then(response => response.text())
+            .then(credits => {
+                // If the returned credits is null or empty, show login button.
+                if (!credits || credits === "null") {
+                    showLoginButton();
+                } else {
+                    showUserInfo(credits);
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching user credits:', err);
+                showLoginButton();
+            });
+    }
+
+    // When clicking a tab, switch type
+    function onTabClicked(type, btn) {
+        currentType = type;
+        // Update active class
+        document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Fetch data
+        fetchAssets(currentType, currentAssetName);
+    }
+
+    // When searching, update assetName
+    function onSearchClicked() {
+        let input = document.getElementById('searchInput');
+        currentAssetName = input.value.trim();
+        fetchAssets(currentType, currentAssetName);
+    }
+
+    // Fetch data from the backend
+    function fetchAssets(type, assetName) {
+        // Show loading spinner
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('noResults').style.display = 'none'; // hide "no results" message if previously shown
+
+        const url = `/backend/getPublicAssets?assetName=${encodeURIComponent(assetName)}&type=${type}`;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                renderAssets(data);
+            })
+            .catch(err => {
+                console.error('Error fetching assets:', err);
+            })
+            .finally(() => {
+                // Hide the spinner after fetch (success or error)
+                document.getElementById('loadingSpinner').style.display = 'none';
+            });
+    }
+
+    // Render the asset cards
+    function renderAssets(assetList) {
+        const container = document.getElementById('assetGrid');
+        container.innerHTML = ''; // Clear previous
+
+        if (!assetList || assetList.length === 0) {
+            // Show "no results" message if list is empty
+            document.getElementById('noResults').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('noResults').style.display = 'none'; // hide "no results" if any results
+
+        assetList.forEach(json => {
+            const card = document.createElement('div');
+            card.className = 'asset-card';
+
+            // Get the first thumb image
+            let firstImageUrl = '';
+            if (json.thumbimages) {
+                let images = json.thumbimages.split(',');
+                if (images.length > 0) {
+                    firstImageUrl = images[0].trim();
+                }
+            }
+
+            // Thumbnail
+            const img = document.createElement('img');
+            img.src = firstImageUrl || 'https://via.placeholder.com/200x120?text=No+Image';
+            img.alt = 'Asset Thumbnail';
+            img.className = 'asset-thumbnail';
+
+            // Info container
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'asset-info';
+
+            // Name
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'asset-name';
+            nameDiv.textContent = json.name || '未命名资产';
+
+            // Time info
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'asset-meta';
+            if (json.last_modified_time === json.created_time) {
+                metaDiv.textContent = `创建于 ${json.created_time}`;
+            } else {
+                metaDiv.textContent = `编辑于 ${json.last_modified_time}`;
+            }
+
+            // Price
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'asset-price';
+            priceDiv.textContent = `￥${json.price}`;
+
+            // Stats: view & download
+            const statsDiv = document.createElement('div');
+            statsDiv.className = 'asset-stats';
+            statsDiv.innerHTML = `
+                <span><i>👁</i> ${json.num_views || 0}</span>
+                <span><i>📥</i> ${json.num_buys || 0}</span>
+            `;
+
+            infoDiv.appendChild(nameDiv);
+            infoDiv.appendChild(metaDiv);
+            infoDiv.appendChild(priceDiv);
+            infoDiv.appendChild(statsDiv);
+
+            card.appendChild(img);
+            card.appendChild(infoDiv);
+
+            // Click event -> open link in new tab
+            card.onclick = () => {
+                window.open(`/mall/product?pid=${json.id}`, '_blank');
+            };
+
+            container.appendChild(card);
+        });
+    }
+</script>
+
+</body>
+</html>

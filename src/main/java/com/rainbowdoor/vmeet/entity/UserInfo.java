@@ -6,4 +6,6 @@ import lombok.Data;
 public class UserInfo {
     private int id;
     private String name;
+    private float credits;
+    private String signature;
 }

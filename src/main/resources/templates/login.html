@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>登录</title>
+  <style>
+    /* Reset some default browser styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to bottom right, #d7e1ec, #f2f6fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .login-container {
+      width: 360px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      text-align: center;
+      position: relative;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-title {
+      margin-bottom: 20px;
+      font-size: 22px;
+      color: #333;
+    }
+
+    .input-field {
+      width: 100%;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .input-box {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .links {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .links a {
+      color: #007aff;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .links a:hover {
+      color: #0051b7;
+    }
+
+    .login-button {
+      width: 100%;
+      background: #007aff;
+      color: #fff;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .login-button:hover {
+      background: #0051b7;
+    }
+
+    .error-message {
+      margin-top: 15px;
+      color: red;
+      font-size: 14px;
+      min-height: 20px; /* Reserve space even if no error */
+    }
+
+    /* Responsive for smaller screens */
+    @media screen and (max-width: 400px) {
+      .login-container {
+        width: 90%;
+        margin: 0 5%;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="login-container">
+  <h2 class="login-title">欢迎登录【V MEET】</h2>
+
+  <!-- User Name / Phone Number -->
+  <div class="input-field">
+    <input
+            type="text"
+            id="userName"
+            class="input-box"
+            placeholder="用户昵称/手机号码"
+    />
+  </div>
+
+  <!-- Password -->
+  <div class="input-field">
+    <input
+            type="password"
+            id="password"
+            class="input-box"
+            placeholder="请输入密码"
+    />
+  </div>
+
+  <!-- Links -->
+  <div class="links">
+    <a href="/reset-password">忘记密码</a>
+    <a href="/register">注册账号</a>
+  </div>
+
+  <!-- Login button -->
+  <button class="login-button" id="loginBtn">登录</button>
+
+  <!-- Error / Warning message -->
+  <div class="error-message" id="errorMessage"></div>
+</div>
+
+<script>
+  // Utility function to get URL query parameters
+  function getQueryParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', function () {
+    const userName = document.getElementById('userName').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Clear previous errors
+    errorMessage.textContent = '';
+
+    if (!userName || !password) {
+      errorMessage.textContent = '请输入完整的用户名和密码。';
+      return;
+    }
+
+    // Convert data to form-encoded
+    const formData = new URLSearchParams();
+    formData.append('userName', userName);
+    formData.append('password', password);
+
+    // Send POST request using form data
+    fetch('/backend/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: formData.toString()
+    })
+            .then(response => response.json())
+            .then(result => {
+              if (result.type === '1') {
+                // ------------------------------
+                // 1. Store userName & password in local storage
+                // ------------------------------
+                localStorage.setItem('userName', userName);
+                localStorage.setItem('password', password);
+
+                // 2. Then redirect
+                const redirectTo = getQueryParameter('redirectTo');
+                if (redirectTo) {
+                  window.location.href = redirectTo;
+                } else {
+                  window.location.href = '/mall';
+                }
+              } else {
+                // Error
+                errorMessage.textContent = result.message || '登录失败，请重试。';
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              errorMessage.textContent = '服务器错误，请稍后再试。';
+            });
+  });
+</script>
+</body>
+</html>

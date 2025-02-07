@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -19,7 +18,6 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +36,10 @@ public class Controller {
     private ChatService chatService;
     @Autowired
     private ChatSessionService chatSessionService;
+    @Autowired
+    private UserTokenService userTokenService;
+    @Autowired
+    private AssetOwnershipService assetOwnershipService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -64,6 +66,43 @@ public class Controller {
             }
         }
         return result;
+    }
+
+    @PostMapping("/login")
+    @ResponseBody
+    public Map<String, Object> website_login(@RequestBody Map<String, String> requestBody) {
+        String url = "https://15636000.bbscloud.com/api/login";
+        ResponseEntity<Map> response = restTemplate.postForEntity(url, requestBody, Map.class);
+        Map<String, Object> responseBody = response.getBody();
+        try {
+            Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+            String token = (String) data.get("token");
+            String username = (String) ((Map<String, Object>) data.get("userInfo")).get("userName");
+            Integer uid = userService.selectIdByUsername(username);
+            if (uid != null) {
+                userTokenService.insertUserToken(token, uid);
+            } else {
+                String accountMobile = (String) ((Map<String, Object>) data.get("userInfo")).get("accountMobile");
+                uid = userService.selectIdByPhone(accountMobile);
+                if (uid != null) {
+                    userTokenService.insertUserToken(token, uid);
+                }
+            }
+        }
+        catch (Exception e) {System.err.println(e);}
+        Map<String, Object> result = new HashMap<>();
+        result.putAll(responseBody);
+        return result;
+    }
+
+    @GetMapping("/") // send request to https://15636000.bbscloud.com, get the response, replace <a href="/mall" class=""> with <a href="/mall" class="" onclick="window.location.href='/mall'; return false;">, return the response
+    @ResponseBody
+    public String index() {
+        String url = "https://15636000.bbscloud.com";
+        ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+        String responseBody = response.getBody();
+        responseBody = responseBody.replace("<a href=\"/mall\" class=\"\">", "<a href=\"/mall\" class=\"\" onclick=\"window.location.href='/mall'; return false;\">");
+        return responseBody;
     }
 
     @PostMapping("/backend/login")
@@ -351,6 +390,21 @@ public class Controller {
         }
     }
 
+    @GetMapping("/mall")
+    public String mall() {
+        return "mall";
+    }
+
+    @GetMapping("/mall/login")
+    public String mall_login() {
+        return "login";
+    }
+
+    @GetMapping("/mall/product")
+    public String assetDetail() {
+        return "assetDetail";
+    }
+
     @GetMapping("/backend/getOwnAssets")
     @ResponseBody
     public ResponseEntity<List<Asset>> getOwnAssets(
@@ -400,8 +454,170 @@ public class Controller {
             @RequestParam String assetName,
             @RequestParam String type) {
 
+        if(type.equals("all")) {
+            List<UserAssetWithoutPrivacy> assets = assetService.selectPublicAssetsByName(assetName, type);
+            return ResponseEntity.ok(assets);
+        }
         List<UserAssetWithoutPrivacy> assets = assetService.selectPublicAssetsByNameAndType(assetName, type);
         return ResponseEntity.ok(assets);
+    }
+
+    @GetMapping("/backend/getPublicAssetById")
+    @ResponseBody
+    public ResponseEntity<UserAssetWithoutPrivacy> getPublicAssetById(@RequestParam Integer pid) {
+        UserAssetWithoutPrivacy asset = assetService.selectPublicAssetById(pid);
+        return ResponseEntity.ok(asset);
+    }
+
+    @PostMapping("/backend/buyAsset")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> buyAsset(
+            @RequestParam String aid,
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String token) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        Map<String, String> result = new HashMap<>();
+        if (currentTimestamp > expires) {
+            result.put("type", "2");
+            result.put("message", "timestamp expired");
+            return ResponseEntity.ok(result);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(aid + expires + password + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(aid.toString() + expires + password + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    result.put("type", "1");
+                    result.put("message", "wrong username or password, or invalid token");
+                    return ResponseEntity.ok(result);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            result.put("type", "1");
+            result.put("message", "wrong username or password, or invalid token");
+            return ResponseEntity.ok(result);
+        }
+
+        if (assetOwnershipService.selectCountByUidAndAid(uid, Integer.valueOf(aid)) > 0) {
+            result.put("type", "2");
+            result.put("message", "already owned");
+            return ResponseEntity.ok(result);
+        }
+
+        float credits = userInfoService.selectUserInfoByUid(uid).getCredits();
+        float price = assetService.selectPublicAssetById(Integer.valueOf(aid)).getPrice();
+        if (credits < price) {
+            result.put("type", "2");
+            result.put("message", "insufficient credits");
+            return ResponseEntity.ok(result);
+        }
+
+        userInfoService.updateCreditsByUid(uid, credits - price);
+        assetOwnershipService.insertAssetOwnership(uid, Integer.valueOf(aid));
+        assetService.updateNumBuysById(Integer.valueOf(aid));
+        result.put("type", "0");
+        result.put("message", "success");
+        return ResponseEntity.ok(result);
+    }
+
+
+    @GetMapping("/backend/verifyAssetOwnership")
+    @ResponseBody
+    public ResponseEntity<Boolean> verifyAssetOwnership(
+            @RequestParam Integer aid,
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String token) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(aid.toString() + expires + password + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(aid.toString() + expires + password + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(false);
+        }
+
+        if (assetOwnershipService.selectCountByUidAndAid(uid, aid) > 0) {
+            return ResponseEntity.ok(true);
+        }
+        return ResponseEntity.ok(false);
+    }
+
+    @GetMapping("/backend/getUserCredits")
+    @ResponseBody
+    public ResponseEntity<Float> getUserCredits(
+            @RequestParam String username,
+            @RequestParam String token,
+            @RequestParam Integer expires) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String password = userService.selectPasswordByUsername(username);
+        if (password == null) {
+            password = userService.selectPasswordByPhone(username);
+        }
+
+        if (password == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        String generatedToken = generateMD5(username + expires + password);
+        if (!generatedToken.equalsIgnoreCase(token)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = userService.selectIdByUsername(username);
+        if (uid == null) {
+            uid = userService.selectIdByPhone(username);
+        }
+
+        UserInfo userInfo = userInfoService.selectUserInfoByUid(uid);
+        if (userInfo == null) {
+            userInfoService.insertUserProfile(uid);
+            return ResponseEntity.ok(0f);
+        }
+        return ResponseEntity.ok(userInfo.getCredits());
     }
 
     @GetMapping("/backend/getFriendship")
