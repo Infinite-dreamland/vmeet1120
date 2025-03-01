@@ -1,4 +1,5 @@
 use vmeet;
+DROP TRIGGER IF EXISTS AfterUserInsert;
 DROP PROCEDURE IF EXISTS addToken;
 DROP TABLE IF EXISTS Chat;
 DROP TABLE IF EXISTS ChatSession;
@@ -23,6 +24,20 @@ CREATE TABLE UserProfiles
     signature TEXT,
     CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id)
 );
+
+DELIMITER //
+
+CREATE TRIGGER AfterUserInsert
+AFTER INSERT ON Users
+FOR EACH ROW
+BEGIN
+    INSERT INTO UserProfiles (uid)
+    VALUES (NEW.id);
+END;
+
+//
+DELIMITER ;
+
 CREATE TABLE Assets (
 	id INTEGER PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(20),
