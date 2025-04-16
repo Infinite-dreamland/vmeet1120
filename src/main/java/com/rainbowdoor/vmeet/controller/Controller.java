@@ -448,6 +448,47 @@ public class Controller {
         return ResponseEntity.ok(assets);
     }
 
+    @GetMapping("/backend/getAssetsByUsername")
+    @ResponseBody
+    public ResponseEntity<List<Asset>> getOwnAssets(
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String token) {
+
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(expires + password + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(expires + password + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        List<Asset> assets = assetOwnershipService.selectAssetsByUid(uid);
+        return ResponseEntity.ok(assets);
+    }
+
     @GetMapping("/backend/getPublicAssets")
     @ResponseBody
     public ResponseEntity<List<UserAssetWithoutPrivacy>> getOwnAssets(
