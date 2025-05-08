@@ -40,6 +40,7 @@ public class Controller {
     private UserTokenService userTokenService;
     @Autowired
     private AssetOwnershipService assetOwnershipService;
+    @Autowired CharacterConfigService characterConfigService;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -448,10 +449,11 @@ public class Controller {
         return ResponseEntity.ok(assets);
     }
 
-    @GetMapping("/backend/getAssetsByUsername")
+    @GetMapping("/backend/getAssetsByUsernameAndType")
     @ResponseBody
     public ResponseEntity<List<Asset>> getOwnAssets(
             @RequestParam String username,
+            @RequestParam String type,
             @RequestParam Integer expires,
             @RequestParam String token) {
 
@@ -464,7 +466,7 @@ public class Controller {
         String password = userService.selectPasswordByUsername(username);
 
         if (password != null) {
-            String generatedToken = generateMD5(expires + password + username);
+            String generatedToken = generateMD5(expires + password + type + username);
             if (generatedToken.equals(token)) {
                 uid = userService.selectIdByUsername(username);
             }
@@ -484,9 +486,16 @@ public class Controller {
         if (uid == -1) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
-
-        List<Asset> assets = assetOwnershipService.selectAssetsByUid(uid);
-        return ResponseEntity.ok(assets);
+        if(type.equals("all"))
+        {
+            List<Asset> assets = assetOwnershipService.selectAssetsByUid(uid);
+            return ResponseEntity.ok(assets);
+        }
+        else
+        {
+            List<Asset> assets = assetOwnershipService.selectAssetsByUidAndType(uid, type);
+            return ResponseEntity.ok(assets);
+        }
     }
 
     @GetMapping("/backend/getPublicAssets")
@@ -575,6 +584,110 @@ public class Controller {
         result.put("type", "0");
         result.put("message", "success");
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/backend/getCharacterConfig")
+    @ResponseBody
+    public ResponseEntity<CharacterConfig> getCharacterConfig(
+            @RequestParam Integer aid,
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String token) {
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(aid.toString() + expires + password + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(aid.toString() + expires + password + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        if(assetOwnershipService.selectCountByUidAndAid(uid, aid) > 0) {
+            return ResponseEntity.ok(characterConfigService.findConfigByAidAndUid(aid, uid));
+        }
+        else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+    @PostMapping("/backend/updateCharacterConfig")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> updateCharacterConfig(
+            @RequestParam Integer aid,
+            @RequestParam String config,
+            @RequestParam String username,
+            @RequestParam Integer expires,
+            @RequestParam String token) {
+        long currentTimestamp = Instant.now().getEpochSecond(); // current UTC timestamp in seconds
+        if (currentTimestamp > expires) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Integer uid = -1;
+        String password = userService.selectPasswordByUsername(username);
+
+        if (password != null) {
+            String generatedToken = generateMD5(aid.toString() + config + expires + password + username);
+            if (generatedToken.equals(token)) {
+                uid = userService.selectIdByUsername(username);
+            }
+        }
+
+        if (password == null || uid == -1) {
+            password = userService.selectPasswordByPhone(username);
+            if (password != null) {
+                String generatedToken = generateMD5(aid.toString() + config + expires + password + username);
+                if (!generatedToken.equalsIgnoreCase(token)) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                }
+                uid = userService.selectIdByPhone(username);
+            }
+        }
+
+        if (uid == -1) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        Map<String, String> result = new HashMap<>();
+
+        if(assetOwnershipService.selectCountByUidAndAid(uid, Integer.valueOf(aid)) > 0) {
+            if(characterConfigService.findConfigByAidAndUid(Integer.valueOf(aid), uid) != null) {
+                characterConfigService.updateConfig(Integer.valueOf(aid), uid, config);
+            }
+            else
+            {
+                characterConfigService.insertConfig(Integer.valueOf(aid), uid, config);
+            }
+            result.put("type", "0");
+            result.put("message", "success");
+            return ResponseEntity.ok(result);
+        }
+        else {
+            result.put("type", "-1");
+            result.put("message", "The asset is not owned.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        }
     }
 
 

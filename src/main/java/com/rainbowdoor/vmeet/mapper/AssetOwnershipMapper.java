@@ -18,4 +18,7 @@ public interface AssetOwnershipMapper {
     @Select("SELECT Assets.* FROM Assets, AssetOwnership WHERE Assets.id=AssetOwnership.aid AND AssetOwnership.uid=#{uid}")
     List<Asset> selectAssetsByUid(Integer uid);
 
+    @Select("SELECT Assets.* FROM Assets, AssetOwnership WHERE Assets.id=AssetOwnership.aid AND AssetOwnership.uid=#{uid} AND Assets.type = #{type}")
+    List<Asset> selectAssetsByUidAndType(Integer uid, String type);
+
 }

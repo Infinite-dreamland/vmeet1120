@@ -109,4 +109,14 @@ CREATE TABLE ChatSession (
     CONSTRAINT FOREIGN KEY (uid2) REFERENCES Users(id)
 );
 
+CREATE TABLE CharacterConfig (
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    uid INTEGER,
+    aid INTEGER,
+    config TEXT,
+    CONSTRAINT FOREIGN KEY (aid) REFERENCES Assets(id),
+    CONSTRAINT FOREIGN KEY (uid) REFERENCES Users(id),
+    CONSTRAINT UNIQUE (uid, aid)
+);
+
 insert into users (name,password,phone) values ("徐亦昶","xyl3331996","13233131808");

@@ -26,4 +26,9 @@ public class AssetOwnershipService {
     {
         return assetOwnershipMapper.selectAssetsByUid(uid);
     }
+
+    public List<Asset> selectAssetsByUidAndType(Integer uid, String type)
+    {
+        return assetOwnershipMapper.selectAssetsByUidAndType(uid, type);
+    }
 }
